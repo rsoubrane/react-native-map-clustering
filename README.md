@@ -4,6 +4,8 @@ React Native module that handles map clustering for you.
 
 Works with **Expo** and **react-native-cli** 🚀
 
+This repo is a fork from [react-native-map-clustering](https://github.com/venits/react-native-map-clustering) with an upgrade to supercluster v8.0.1 and some other improvements.
+
 This repo is proudly sponsored by:
 
 <a href="https://reactnativemarket.com/" rel="nofollow" target="_blank">
@@ -56,7 +58,7 @@ export default App;
 ## Props
 
 | Name                                        | Type                  | Default                                      | Note                                                                                                                                                                                                                            |
-| ------------------------------------------- | --------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------- | --------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | **clusterColor**                            | String                | #00B386                                      | Background color of cluster.                                                                                                                                                                                                    |
 | **clusterTextColor**                        | String                | #FFFFFF                                      | Color of text in cluster.                                                                                                                                                                                                       |
 | **clusterFontFamily**                       | String                | undefined                                    | Font family of text in cluster.                                                                                                                                                                                                 |
