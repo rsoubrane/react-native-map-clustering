@@ -1,6 +1,6 @@
 {
   "name": "rs-react-native-map-clustering",
-  "version": "4.0.0",
+  "version": "3.4.3",
   "description": "React Native Map Clustering both for Android and iOS",
   "types": "index.d.ts",
   "main": "index.js",
@@ -31,7 +31,7 @@
     "@mapbox/geo-viewport": "^0.5.0"
   },
   "peerDependencies": {
-    "react-native-maps": "1.10.0",
+    "react-native-maps": "*",
     "react-native": "*"
   }
 }
