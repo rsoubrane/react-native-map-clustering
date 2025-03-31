@@ -4,32 +4,34 @@ React Native module that handles map clustering for you.
 
 Works with **Expo** and **react-native-cli** 🚀
 
-This repo is a fork from [react-native-map-clustering](https://github.com/venits/react-native-map-clustering) with an upgrade to supercluster v8.0.1 and some other improvements.
+This repo is a fork from [react-native-map-clustering](https://github.com/venits/react-native-map-clustering) with an upgrade to supercluster v8.0.1 and full TypeScript support.
 
-This repo is proudly sponsored by:
+## Features
 
-<a href="https://reactnativemarket.com/" rel="nofollow" target="_blank">
-  <img src="https://raw.githubusercontent.com/venits/react-native-market/master/assets/banner.png" width="280"><br />
-  React Native Templates & Starter Kits and Apps for easier start.
-</a>
-
-## Demo
-
-![Demo](https://raw.githubusercontent.com/venits/react-native-map-clustering/assets/assets/demo.gif)
+- Fully typed with TypeScript
+- Fast clustering using SuperCluster v8.0.1
+- Customizable cluster markers
+- Spider mode for overlapping markers
+- Compatible with Expo and React Native CLI
+- Supports both iOS and Android
 
 ## Installation
 
 ```js
-npm install react-native-map-clustering react-native-maps --save
-// yarn add react-native-map-clustering react-native-maps
+npm install rs-react-native-map-clustering react-native-maps --save
+// or using yarn
+yarn add rs-react-native-map-clustering react-native-maps
+// or using pnpm
+pnpm add rs-react-native-map-clustering react-native-maps
 ```
 
-### Full example
+## TypeScript Example
 
-```js
-import React from "react";
-import MapView from "react-native-map-clustering";
-import { Marker } from "react-native-maps";
+```tsx
+import React, { useRef } from 'react';
+import { View, StyleSheet } from 'react-native';
+import MapView, { ClusteredMapProps } from 'rs-react-native-map-clustering';
+import { Marker } from 'react-native-maps';
 
 const INITIAL_REGION = {
   latitude: 52.5,
@@ -38,19 +40,42 @@ const INITIAL_REGION = {
   longitudeDelta: 8.5,
 };
 
-const App = () => (
-  <MapView initialRegion={INITIAL_REGION} style={{ flex: 1 }}>
-    <Marker coordinate={{ latitude: 52.4, longitude: 18.7 }} />
-    <Marker coordinate={{ latitude: 52.1, longitude: 18.4 }} />
-    <Marker coordinate={{ latitude: 52.6, longitude: 18.3 }} />
-    <Marker coordinate={{ latitude: 51.6, longitude: 18.0 }} />
-    <Marker coordinate={{ latitude: 53.1, longitude: 18.8 }} />
-    <Marker coordinate={{ latitude: 52.9, longitude: 19.4 }} />
-    <Marker coordinate={{ latitude: 52.2, longitude: 21 }} />
-    <Marker coordinate={{ latitude: 52.4, longitude: 21 }} />
-    <Marker coordinate={{ latitude: 51.8, longitude: 20 }} />
-  </MapView>
-);
+const App = () => {
+  const mapRef = useRef<MapView>(null);
+  
+  // Access to exported types
+  const clusteringOptions: Partial<ClusteredMapProps> = {
+    clusterColor: '#FF0000',
+    spiralEnabled: true,
+    tracksViewChanges: false
+  };
+
+  return (
+    <View style={styles.container}>
+      <MapView
+        ref={mapRef}
+        initialRegion={INITIAL_REGION}
+        style={styles.map}
+        {...clusteringOptions}
+      >
+        <Marker coordinate={{ latitude: 52.4, longitude: 18.7 }} />
+        <Marker coordinate={{ latitude: 52.1, longitude: 18.4 }} />
+        <Marker coordinate={{ latitude: 52.6, longitude: 18.3 }} />
+        <Marker coordinate={{ latitude: 51.6, longitude: 18.0 }} />
+        <Marker coordinate={{ latitude: 53.1, longitude: 18.8 }} />
+      </MapView>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  map: {
+    flex: 1,
+  },
+});
 
 export default App;
 ```

@@ -1,37 +1,57 @@
 {
-  "name": "rs-react-native-map-clustering",
-  "version": "3.4.4",
-  "description": "React Native Map Clustering both for Android and iOS",
-  "types": "index.d.ts",
-  "main": "index.js",
-  "scripts": {
-    "test": "jest"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/rsoubrane/react-native-map-clustering.git"
-  },
-  "keywords": [
-    "react-native",
-    "react",
-    "cluster",
-    "android",
-    "iOS",
-    "map",
-    "clustering"
-  ],
-  "author": "Venits",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/rsoubrane/react-native-map-clustering/issues"
-  },
-  "homepage": "https://github.com/rsoubrane/react-native-map-clustering#readme",
-  "dependencies": {
-    "supercluster": "^8.0.1",
-    "@mapbox/geo-viewport": "^0.5.0"
-  },
-  "peerDependencies": {
-    "react-native-maps": "*",
-    "react-native": "*"
-  }
+    "name": "rs-react-native-map-clustering",
+    "version": "3.5.0",
+    "description": "React Native Map Clustering both for Android and iOS with TypeScript support",
+    "types": "dist/index.d.ts",
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "files": [
+        "dist",
+        "lib",
+        "index.ts",
+        "README.md",
+        "LICENSE"
+    ],
+    "scripts": {
+        "test": "jest",
+        "build": "tsc",
+        "prepare": "npm run build"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/rsoubrane/react-native-map-clustering.git"
+    },
+    "keywords": [
+        "react-native",
+        "react",
+        "cluster",
+        "android",
+        "iOS",
+        "map",
+        "clustering",
+        "typescript"
+    ],
+    "author": "Venits",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/rsoubrane/react-native-map-clustering/issues"
+    },
+    "homepage": "https://github.com/rsoubrane/react-native-map-clustering#readme",
+    "dependencies": {
+        "@mapbox/geo-viewport": "^0.5.0",
+        "supercluster": "^8.0.1"
+    },
+    "peerDependencies": {
+        "react": "*",
+        "react-native": "*",
+        "react-native-maps": "*"
+    },
+    "devDependencies": {
+        "@types/mapbox__geo-viewport": "*",
+        "@types/react": "*",
+        "@types/supercluster": "*",
+        "geojson": "^0.5.0",
+        "typescript": "*"
+    },
+    "packageManager": "pnpm@10.7.0+sha512.6b865ad4b62a1d9842b61d674a393903b871d9244954f652b8842c2b553c72176b278f64c463e52d40fff8aba385c235c8c9ecf5cc7de4fd78b8bb6d49633ab6"
 }
