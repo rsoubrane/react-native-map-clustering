@@ -1,10 +1,10 @@
-import React, { memo, useState, useEffect, useMemo, useRef, forwardRef } from 'react';
+import React, { memo, useState, useEffect, useMemo, useRef, forwardRef, useCallback } from 'react';
 import { Dimensions, LayoutAnimation, Platform } from 'react-native';
 import MapView, { Polyline, Region } from 'react-native-maps';
 import SuperCluster from 'supercluster';
 import ClusterMarker from './ClusteredMarker';
-import { isMarker, markerToGeoJSONFeature, calculateBBox, returnMapZoom, generateSpiral, convertToFeatureArray } from './helpers';
-import { ClusteredMapProps, Feature, MarkerData, SuperClusterOptions } from './types';
+import { isMarker, markerToGeoJSONFeature, calculateBBox, returnMapZoom, generateSpiral, ensureCoordinates } from './helpers';
+import { ClusteredMapProps, Feature, MarkerData, SuperClusterType } from './types';
 
 /**
  * A map view that automatically clusters markers based on zoom level
@@ -62,226 +62,338 @@ const ClusteredMapView = forwardRef<MapView, ClusteredMapProps>(
 		},
 		ref
 	) => {
-		// State management optimizations with proper typing
+		// State management with proper typing
 		const [markers, updateMarkers] = useState<Feature[]>([]);
 		const [spiderMarkers, updateSpiderMarker] = useState<MarkerData[]>([]);
-		const [otherChildren, updateChildren] = useState<React.ReactNode[]>([]);
-		const [superCluster, setSuperCluster] = useState<SuperCluster | null>(null);
-		const [currentRegion, updateRegion] = useState<Region | undefined>(
-			restProps.region ? (restProps.region as Region) : restProps.initialRegion
+		const [otherChildren, updateOtherChildren] = useState<React.ReactNode[]>([]);
+		const [clusterChildren, updateClusterChildren] = useState<Feature[]>([]);
+		const [superCluster, setSuperCluster] = useState<SuperClusterType | null>(null);
+		const [isSpiderfier, setSpiderfier] = useState<boolean>(false);
+		const [region, updateRegion] = useState<Region>((restProps.region || restProps.initialRegion) as Region);
+
+		// Internal references
+		const mapRefInternal = useRef<MapView>(null);
+		const currentRegionRef = useRef(region);
+
+		// Combine refs for external and internal use
+		const combinedRef = useCallback(
+			(mapViewRef: MapView | null) => {
+				// Store ref internally
+				if (mapViewRef) {
+					mapRefInternal.current = mapViewRef;
+
+					// Forward ref to parent if needed
+					if (ref) {
+						if (typeof ref === 'function') {
+							ref(mapViewRef);
+						} else {
+							ref.current = mapViewRef;
+						}
+					}
+
+					// Also call the external mapRef callback
+					externalMapRef(mapViewRef);
+				}
+			},
+			[ref, externalMapRef]
 		);
-		const [isSpiderfier, updateSpiderfier] = useState(false);
-		const [clusterChildren, updateClusterChildren] = useState<Feature[] | null>(null);
-		const mapRef = useRef<MapView | null>(null);
 
-		// Memoize children to prevent unnecessary re-renders
-		const propsChildren = useMemo(() => React.Children.toArray(children), [children]);
-
-		// Initialize SuperCluster with proper typing and memoization
-		useEffect(() => {
-			const rawData: Feature[] = [];
-			const otherChildrenNodes: React.ReactNode[] = [];
-
-			// Skip clustering if disabled
+		/**
+		 * Processes children to extract markers and other components
+		 */
+		const processChildren = useCallback(() => {
+			// Skip processing if clustering is disabled
 			if (!clusteringEnabled) {
-				updateSpiderMarker([]);
+				updateOtherChildren(React.Children.toArray(children));
 				updateMarkers([]);
-				updateChildren(propsChildren);
-				setSuperCluster(null);
 				return;
 			}
 
-			// Separate markers from other children
-			propsChildren.forEach((child, index) => {
+			const rawMarkers: Feature[] = [];
+			const otherChildrenArray: React.ReactNode[] = [];
+
+			React.Children.forEach(children, (child, index) => {
 				if (isMarker(child)) {
-					rawData.push(markerToGeoJSONFeature(child, index));
+					rawMarkers.push(markerToGeoJSONFeature(child, index));
 				} else {
-					otherChildrenNodes.push(child);
+					otherChildrenArray.push(child);
 				}
 			});
 
-			// Configure SuperCluster with proper typing
-			const clusterOptions: SuperClusterOptions = {
+			// Initialize SuperCluster
+			const cluster = new SuperCluster({
 				radius,
 				maxZoom,
 				minZoom,
 				minPoints,
 				extent,
 				nodeSize
-			};
+			}) as SuperClusterType;
 
-			const cluster = new SuperCluster(clusterOptions);
-			cluster.load(rawData);
+			// Load points into the cluster
+			cluster.load(rawMarkers);
 
-			// Calculate initial clusters if region exists
-			if (currentRegion) {
-				const bBox = calculateBBox(currentRegion as Region);
-				const zoom = returnMapZoom(currentRegion as Region, bBox, minZoom);
-				const rawClusters = cluster.getClusters(bBox, zoom);
-				const clusterMarkers = convertToFeatureArray(rawClusters);
-
-				updateMarkers(clusterMarkers);
-				updateChildren(otherChildrenNodes);
-				setSuperCluster(cluster);
-
-				// Update ref if provided
-				if (superClusterRef) {
-					// @ts-ignore
-					superClusterRef.current = cluster;
-				}
+			// Calculate visible markers based on the current region
+			let markersInView: Feature[] = [];
+			if (currentRegionRef.current) {
+				const bbox = calculateBBox(currentRegionRef.current);
+				const zoom = returnMapZoom(currentRegionRef.current, bbox, minZoom);
+				markersInView = cluster.getClusters(bbox, Math.floor(zoom));
 			}
-		}, [propsChildren, clusteringEnabled, radius, maxZoom, minZoom, minPoints, extent, nodeSize, currentRegion]);
 
-		useEffect(() => {
-			if (!spiralEnabled || !superCluster) return;
+			// Update state
+			setSuperCluster(cluster);
+			updateMarkers(markersInView);
+			updateOtherChildren(otherChildrenArray);
 
-			if (isSpiderfier && markers.length > 0) {
-				const allSpiderMarkers: MarkerData[] = [];
-
-				markers.forEach((marker, i) => {
-					if (marker.properties.cluster && marker.properties.cluster_id !== undefined) {
-						const spiralChildren = superCluster.getLeaves(marker.properties.cluster_id, Infinity);
-
-						// @ts-ignore
-						const positions = generateSpiral(marker, spiralChildren, markers, i);
-						allSpiderMarkers.push(...positions);
-					}
-				});
-
-				updateSpiderMarker(allSpiderMarkers);
-			} else {
-				updateSpiderMarker([]);
+			// Pass superCluster reference to parent if needed
+			if (superClusterRef) {
+				superClusterRef.current = cluster;
 			}
-		}, [isSpiderfier, markers, superCluster, spiralEnabled]);
 
-		const _onRegionChangeComplete = (region: Region) => {
-			if (superCluster && region) {
-				const bBox = calculateBBox(region);
-				const zoom = returnMapZoom(region, bBox, minZoom);
-				const rawClusters = superCluster.getClusters(bBox, zoom);
-				const clusterMarkers = convertToFeatureArray(rawClusters);
+			// Notify parent of marker changes
+			onMarkersChange(markersInView);
+		}, [children, clusteringEnabled, radius, maxZoom, minZoom, minPoints, extent, nodeSize, superClusterRef, onMarkersChange]);
 
+		/**
+		 * Handles region change to update visible markers
+		 */
+		const handleRegionChangeComplete = useCallback(
+			(newRegion: Region) => {
+				if (!superCluster || !newRegion) return;
+
+				// Store current region in ref for future use
+				currentRegionRef.current = newRegion;
+				updateRegion(newRegion);
+
+				// Calculate visible markers based on new region
+				const bbox = calculateBBox(newRegion);
+				const zoom = returnMapZoom(newRegion, bbox, minZoom);
+				const newMarkers = superCluster.getClusters(bbox, Math.floor(zoom));
+
+				// Apply animation on region change if enabled
 				if (animationEnabled && Platform.OS === 'ios') {
 					LayoutAnimation.configureNext(layoutAnimationConf);
 				}
 
-				if (zoom >= 18 && clusterMarkers.length > 0 && clusterChildren) {
-					if (spiralEnabled) updateSpiderfier(true);
-				} else if (spiralEnabled) updateSpiderfier(false);
+				// Handle spiderfier at high zoom levels
+				if (zoom >= 18 && newMarkers.some((m) => m.properties.cluster) && spiralEnabled) {
+					setSpiderfier(true);
+				} else {
+					setSpiderfier(false);
+					updateClusterChildren([]);
+				}
 
-				updateMarkers(clusterMarkers);
-				onMarkersChange(clusterMarkers);
+				// Update markers
+				updateMarkers(newMarkers);
+
+				// Notify parent of region and marker changes
 				// @ts-ignore
-				onRegionChangeComplete(region, clusterMarkers);
-				updateRegion(region);
-			} else {
-				// @ts-ignore
-				onRegionChangeComplete(region);
-			}
-		};
+				onRegionChangeComplete(newRegion, newMarkers);
+				onMarkersChange(newMarkers);
+			},
+			[superCluster, minZoom, animationEnabled, layoutAnimationConf, spiralEnabled, onRegionChangeComplete, onMarkersChange]
+		);
 
-		const _onClusterPress = (cluster: Feature) => () => {
-			if (!superCluster || cluster.properties.cluster_id === undefined) return;
+		/**
+		 * Handles cluster press to zoom or expand
+		 */
+		const handleClusterPress = useCallback(
+			(cluster: Feature) => {
+				if (!superCluster || !cluster.properties.cluster_id || !mapRefInternal.current) {
+					return;
+				}
 
-			const rawChildren = superCluster.getLeaves(cluster.properties.cluster_id, Infinity);
-			const children = convertToFeatureArray(rawChildren);
-			updateClusterChildren(children);
+				// Get cluster children
+				const children = superCluster.getLeaves(cluster.properties.cluster_id, Infinity);
 
-			if (preserveClusterPressBehavior) {
+				// Store cluster children for potential spiderfier use
+				updateClusterChildren(children);
+
+				// Either zoom to cluster bounds or show spiderfier
+				if (preserveClusterPressBehavior) {
+					// Notify parent of cluster press
+					onClusterPress(cluster, children);
+					return;
+				}
+
+				const coordinates = ensureCoordinates(cluster.geometry.coordinates);
+
+				// Calculate zoom level based on cluster expansion
+				const expansionZoom = Math.min(superCluster.getClusterExpansionZoom(cluster.properties.cluster_id), maxZoom);
+
+				// If we're at max zoom, show spider pattern
+				if (expansionZoom === maxZoom && spiralEnabled) {
+					setSpiderfier(true);
+				} else {
+					// Otherwise zoom to cluster
+					mapRefInternal.current.animateCamera(
+						{
+							center: {
+								latitude: coordinates[1],
+								longitude: coordinates[0]
+							},
+							zoom: expansionZoom
+						},
+						{ duration: 300 }
+					);
+				}
+
+				// Notify parent of cluster press
 				onClusterPress(cluster, children);
+			},
+			[superCluster, preserveClusterPressBehavior, onClusterPress, maxZoom, spiralEnabled]
+		);
+
+		/**
+		 * Process spider markers for display when spiderfier is active
+		 */
+		useEffect(() => {
+			if (!spiralEnabled || !superCluster || !isSpiderfier || !clusterChildren) {
+				updateSpiderMarker([]);
 				return;
 			}
 
-			const coordinates = children.map(({ geometry }) => ({
-				latitude: geometry.coordinates[1],
-				longitude: geometry.coordinates[0]
-			}));
+			const allSpiderMarkers: MarkerData[] = [];
 
-			mapRef.current?.fitToCoordinates(coordinates, {
-				edgePadding
+			markers.forEach((marker, index) => {
+				if (marker.properties.cluster) {
+					const children =
+						marker.properties.cluster_id !== undefined ? superCluster.getLeaves(marker.properties.cluster_id, Infinity) : [];
+
+					const spiderPositions = generateSpiral(marker, children, markers, index);
+
+					allSpiderMarkers.push(...spiderPositions);
+				}
 			});
 
-			onClusterPress(cluster, children);
-		};
+			updateSpiderMarker(allSpiderMarkers);
+		}, [isSpiderfier, markers, superCluster, spiralEnabled, clusterChildren]);
 
-		return (
-			<MapView
-				{...restProps}
-				ref={(map) => {
-					if (map) {
-						mapRef.current = map;
-						if (ref) {
-							if (typeof ref === 'function') {
-								ref(map);
-							} else {
-								ref.current = map;
-							}
-						}
-						externalMapRef(map);
-					}
-				}}
-				onRegionChangeComplete={_onRegionChangeComplete}>
-				{markers.map((marker) => {
-					if (marker.properties.point_count === 0) {
-						return propsChildren[marker.properties.index!];
-					}
+		// Initialize clustering on mount and when children change
+		useEffect(() => {
+			processChildren();
+		}, [processChildren]);
 
-					if (!isSpiderfier && marker.properties.cluster) {
-						if (renderCluster) {
-							return renderCluster({
-								onPress: _onClusterPress(marker),
-								clusterColor:
-									selectedClusterId === marker.properties.cluster_id
-										? selectedClusterColor || clusterColor
-										: clusterColor,
-								clusterTextColor,
-								clusterFontFamily,
-								tracksViewChanges: tracksViewChanges,
-								...marker
-							});
-						}
+		/**
+		 * Renders a cluster marker
+		 */
+		const renderClusterMarker = useCallback(
+			(marker: Feature) => {
+				const isSelected = selectedClusterId === marker.properties.cluster_id;
+				const color = isSelected && selectedClusterColor ? selectedClusterColor : clusterColor;
 
-						return (
-							<ClusterMarker
-								key={`cluster-${marker.properties.cluster_id}`}
-								{...marker}
-								onPress={_onClusterPress(marker)}
-								clusterColor={
-									selectedClusterId === marker.properties.cluster_id ? selectedClusterColor || clusterColor : clusterColor
-								}
-								clusterTextColor={clusterTextColor}
-								clusterFontFamily={clusterFontFamily}
-								tracksViewChanges={tracksViewChanges}
-							/>
-						);
-					}
+				return renderCluster ? (
+					renderCluster({
+						...marker,
+						// @ts-ignore
+						onPress: () => handleClusterPress(marker),
+						tracksViewChanges
+					})
+				) : (
+					<ClusterMarker
+						key={`cluster-${marker.properties.cluster_id}`}
+						{...marker}
+						onPress={() => handleClusterPress(marker)}
+						clusterColor={color}
+						clusterTextColor={clusterTextColor}
+						clusterFontFamily={clusterFontFamily}
+						tracksViewChanges={tracksViewChanges}
+					/>
+				);
+			},
+			[
+				renderCluster,
+				handleClusterPress,
+				clusterColor,
+				clusterTextColor,
+				clusterFontFamily,
+				tracksViewChanges,
+				selectedClusterId,
+				selectedClusterColor
+			]
+		);
 
-					return null;
-				})}
+		/**
+		 * Renders all markers - both clusters and individual markers
+		 */
+		const renderedMarkers = useMemo(() => {
+			if (!clusteringEnabled) {
+				return children;
+			}
 
-				{otherChildren}
+			const markerElements = markers.map((marker) => {
+				// For clusters, use the custom renderer
+				if (marker.properties.cluster) {
+					return renderClusterMarker(marker);
+				}
 
-				{spiderMarkers.map((marker: MarkerData, index: number) => {
-					const child = propsChildren[marker.index!];
-					return child
-						? React.cloneElement(child as React.ReactElement<any>, {
-								key: `spider-${marker.index}-${index}`,
-								coordinate: {
-									latitude: marker.latitude,
-									longitude: marker.longitude
-								}
-							})
-						: null;
-				})}
+				// For individual markers, return the original marker with its original props
+				const originalIndex = marker.properties.index;
+				const child = originalIndex !== undefined ? React.Children.toArray(children)[originalIndex] : null;
+				return child;
+			});
 
-				{spiderMarkers.map((marker: MarkerData, index: number) => (
+			return markerElements;
+		}, [markers, children, clusteringEnabled, renderClusterMarker]);
+
+		/**
+		 * Renders spider lines connecting clusters to their expanded markers
+		 */
+		const renderedSpiderLines = useMemo(() => {
+			if (!spiralEnabled || !isSpiderfier || spiderMarkers.length === 0) {
+				return null;
+			}
+
+			return spiderMarkers.map((marker, index) => {
+				if (!marker.centerPoint) return null;
+
+				return (
 					<Polyline
 						key={`spider-line-${index}`}
-						coordinates={[marker.centerPoint!, { latitude: marker.latitude, longitude: marker.longitude }]}
+						coordinates={[
+							{ latitude: marker.centerPoint.latitude, longitude: marker.centerPoint.longitude },
+							{ latitude: marker.latitude, longitude: marker.longitude }
+						]}
 						strokeColor={spiderLineColor}
 						strokeWidth={1}
 					/>
-				))}
+				);
+			});
+		}, [spiderMarkers, isSpiderfier, spiralEnabled, spiderLineColor]);
+
+		/**
+		 * Renders spider markers when a cluster is expanded
+		 */
+		const renderedSpiderMarkers = useMemo(() => {
+			if (!spiralEnabled || !isSpiderfier || spiderMarkers.length === 0 || !children) {
+				return null;
+			}
+
+			return spiderMarkers.map((marker) => {
+				const originalIndex = marker.index;
+				if (originalIndex === undefined) return null;
+
+				const originalMarker = React.Children.toArray(children)[originalIndex];
+				if (!originalMarker) return null;
+
+				return React.cloneElement(originalMarker as React.ReactElement, {
+					// @ts-ignore
+					coordinate: {
+						latitude: marker.latitude,
+						longitude: marker.longitude
+					},
+					key: `spider-marker-${originalIndex}`
+				});
+			});
+		}, [spiderMarkers, isSpiderfier, spiralEnabled, children]);
+
+		return (
+			<MapView {...restProps} ref={combinedRef} onRegionChangeComplete={handleRegionChangeComplete}>
+				{renderedMarkers}
+				{renderedSpiderLines}
+				{renderedSpiderMarkers}
+				{otherChildren}
 			</MapView>
 		);
 	}

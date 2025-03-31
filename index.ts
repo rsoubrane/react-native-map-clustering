@@ -1,16 +1,29 @@
-import ClusteredMapView from './lib/ClusteredMapView';
+// Export components
+export { default as ClusteredMapView } from './lib/ClusteredMapView';
+export { default as ClusterMarker } from './lib/ClusteredMarker';
 
-// Export the main component
-export default ClusteredMapView;
-export { ClusteredMapView };
+// Export helper functions
+export {
+	isMarker,
+	calculateBBox,
+	returnMapZoom,
+	markerToGeoJSONFeature,
+	generateSpiral,
+	returnMarkerStyle,
+	ensureCoordinates
+} from './lib/helpers';
 
-// Export type definitions for usage in consumer applications
+// Export types for consumers
 export type {
 	ClusteredMapProps,
+	ClusterMarkerProps,
 	Feature,
 	MarkerData,
-	GeoJsonPoint,
-	ClusterMarkerProps,
-	EdgePadding,
-	SuperClusterOptions
+	MarkerStyle,
+	SuperClusterType,
+	SuperClusterOptions,
+	EdgePadding
 } from './lib/types';
+
+// Default export for backward compatibility
+export { default } from './lib/ClusteredMapView';

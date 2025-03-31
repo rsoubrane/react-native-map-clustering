@@ -2,6 +2,7 @@ import { ReactNode, RefObject } from 'react';
 import { LayoutAnimationConfig } from 'react-native';
 import { Region, LatLng, MapViewProps, AnimatedRegion } from 'react-native-maps';
 import SuperCluster from 'supercluster';
+import { BBox, GeoJsonProperties } from 'geojson';
 
 // Add a MapRegion type that can handle both Region and AnimatedRegion
 export type MapRegion = Region | AnimatedRegion;
@@ -24,7 +25,7 @@ export interface Feature {
 		cluster?: boolean;
 		[key: string]: any;
 	};
-	id?: number;
+	id?: number | string;
 }
 
 export interface MarkerData extends LatLng {
@@ -71,12 +72,12 @@ export interface SuperClusterOptions {
 }
 
 // Add compatibility with SuperCluster types
-export interface SuperClusterType extends SuperCluster {
+export interface SuperClusterType extends SuperCluster<GeoJsonProperties, GeoJsonProperties> {
 	getClusterExpansionZoom(clusterId: number): number;
 	getCluster(clusterId: number): Feature;
 	getLeaves(clusterId: number, limit?: number, offset?: number): Feature[];
-	getClusters(bbox: [number, number, number, number], zoom: number): Feature[];
-	load(points: GeoJSON.Feature<GeoJSON.Point>[]): SuperClusterType;
+	getClusters(bbox: BBox, zoom: number): Feature[];
+	load(points: Feature[]): SuperClusterType;
 }
 
 export interface ClusteredMapProps extends MapViewProps {
@@ -115,5 +116,12 @@ export interface ClusteredMapProps extends MapViewProps {
 	onClusterPress?: (cluster: Feature, markers?: Feature[]) => void;
 	onMarkersChange?: (markers: Feature[]) => void;
 	onRegionChangeCompleteCustom?: (region: Region, markers?: Feature[]) => void;
-	renderCluster?: (props: ClusterMarkerProps) => ReactNode;
+
+	// Children
+	children?: ReactNode;
+
+	/**
+	 * Custom render function for clusters
+	 */
+	renderCluster?: (cluster: Feature) => React.ReactNode;
 }

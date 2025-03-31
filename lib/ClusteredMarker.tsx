@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Marker } from 'react-native-maps';
 import { returnMarkerStyle } from './helpers';
@@ -14,15 +14,27 @@ const ClusteredMarker: React.FC<ClusterMarkerProps> = ({
 	tracksViewChanges
 }) => {
 	const points = properties.point_count;
-	const { width, height, fontSize, size } = returnMarkerStyle(points);
+
+	// Memoize style calculations to prevent unnecessary re-renders
+	const markerStyle = useMemo(() => returnMarkerStyle(points), [points]);
+	const { width, height, fontSize, size } = markerStyle;
+
+	// Create a unique key for the marker based on its coordinates
+	const markerKey = useMemo(() => `${geometry.coordinates[0]}_${geometry.coordinates[1]}`, [geometry.coordinates]);
+
+	// Memoize coordinate object to prevent unnecessary re-renders
+	const coordinate = useMemo(
+		() => ({
+			longitude: geometry.coordinates[0],
+			latitude: geometry.coordinates[1]
+		}),
+		[geometry.coordinates]
+	);
 
 	return (
 		<Marker
-			key={`${geometry.coordinates[0]}_${geometry.coordinates[1]}`}
-			coordinate={{
-				longitude: geometry.coordinates[0],
-				latitude: geometry.coordinates[1]
-			}}
+			key={markerKey}
+			coordinate={coordinate}
 			style={{ zIndex: points + 1 }}
 			onPress={onPress}
 			tracksViewChanges={tracksViewChanges}>
@@ -87,4 +99,13 @@ const styles = StyleSheet.create({
 	}
 });
 
-export default memo(ClusteredMarker);
+// Use React.memo with a custom comparison function for optimal performance
+export default memo(ClusteredMarker, (prevProps, nextProps) => {
+	return (
+		prevProps.geometry.coordinates[0] === nextProps.geometry.coordinates[0] &&
+		prevProps.geometry.coordinates[1] === nextProps.geometry.coordinates[1] &&
+		prevProps.properties.point_count === nextProps.properties.point_count &&
+		prevProps.clusterColor === nextProps.clusterColor &&
+		prevProps.clusterTextColor === nextProps.clusterTextColor
+	);
+});

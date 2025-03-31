@@ -14,9 +14,7 @@ export const isMarker = (child: any): boolean => child?.props?.coordinate && chi
  * Calculates the bounding box for a map region
  */
 export const calculateBBox = (region: Region): [number, number, number, number] => {
-	let lngD: number;
-	if (region.longitudeDelta < 0) lngD = region.longitudeDelta + 360;
-	else lngD = region.longitudeDelta;
+	const lngD = region.longitudeDelta < 0 ? region.longitudeDelta + 360 : region.longitudeDelta;
 
 	return [
 		region.longitude - lngD, // westLng - min lng
@@ -96,57 +94,33 @@ export const generateSpiral = (marker: Feature, clusterChildren: Feature[], mark
  * Returns the style for a cluster marker based on the number of points
  */
 export const returnMarkerStyle = (points: number): MarkerStyle => {
-	if (points >= 50) {
+	// Small clusters
+	if (points < 10) {
 		return {
-			width: 84,
-			height: 84,
-			size: 64,
-			fontSize: 20
+			width: 32,
+			height: 32,
+			size: 24,
+			fontSize: 12
 		};
 	}
 
-	if (points >= 25) {
+	// Medium clusters
+	if (points < 25) {
 		return {
-			width: 78,
-			height: 78,
-			size: 58,
-			fontSize: 19
+			width: 40,
+			height: 40,
+			size: 30,
+			fontSize: 13
 		};
 	}
 
-	if (points >= 15) {
+	// Large clusters
+	if (points < 50) {
 		return {
-			width: 72,
-			height: 72,
-			size: 54,
-			fontSize: 18
-		};
-	}
-
-	if (points >= 10) {
-		return {
-			width: 66,
-			height: 66,
-			size: 50,
-			fontSize: 17
-		};
-	}
-
-	if (points >= 8) {
-		return {
-			width: 60,
-			height: 60,
-			size: 46,
-			fontSize: 17
-		};
-	}
-
-	if (points >= 4) {
-		return {
-			width: 54,
-			height: 54,
-			size: 40,
-			fontSize: 16
+			width: 44,
+			height: 44,
+			size: 34,
+			fontSize: 14
 		};
 	}
 
@@ -174,10 +148,7 @@ const _removeChildrenFromProps = (props: Record<string, any>): Record<string, an
 /**
  * Ensures that coordinates from SuperCluster are in the correct format
  */
-// Define the Position type as an array of numbers (e.g., [longitude, latitude])
-type Position = [number, number];
-
-export const ensureCoordinates = (coords: Position): [number, number] => {
+export const ensureCoordinates = (coords: [number, number] | undefined): [number, number] => {
 	if (!coords || coords.length < 2) return [0, 0];
 	return [coords[0], coords[1]];
 };
@@ -227,7 +198,9 @@ export const convertToFeatureArray = (clusters: any[]): Feature[] => {
 			},
 			properties: {
 				...cluster.properties,
-				point_count: cluster.properties.point_count || 0
+				point_count: cluster.properties.point_count || 0,
+				cluster_id: cluster.properties.cluster_id,
+				cluster: cluster.properties.cluster
 			},
 			id: cluster.id
 		};
