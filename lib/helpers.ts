@@ -1,20 +1,61 @@
 import GeoViewport from '@mapbox/geo-viewport';
 import { Dimensions } from 'react-native';
-import { Region } from 'react-native-maps';
-import { Feature, MarkerData, MarkerStyle } from './types';
+import { ReactNode } from 'react';
 
 const { width, height } = Dimensions.get('window');
 
-/**
- * Checks if a child is a marker that can be clustered
- */
-export const isMarker = (child: any): boolean => child?.props?.coordinate && child.props.cluster !== false;
+export interface Region {
+	latitude: number;
+	longitude: number;
+	latitudeDelta: number;
+	longitudeDelta: number;
+}
 
-/**
- * Calculates the bounding box for a map region
- */
+export interface MarkerData {
+	properties: {
+		point_count: number;
+		index: number;
+		[key: string]: any;
+	};
+	geometry: {
+		coordinates: [number, number]; // [longitude, latitude]
+	};
+}
+
+export interface MarkerProps {
+	coordinate: {
+		latitude: number;
+		longitude: number;
+	};
+	cluster?: boolean;
+	[key: string]: any;
+}
+
+export interface SpiderMarker {
+	index: number;
+	longitude: number;
+	latitude: number;
+	centerPoint: {
+		latitude: number;
+		longitude: number;
+	};
+}
+
+export interface ClusterStyleProps {
+	width: number;
+	height: number;
+	size: number;
+	fontSize: number;
+}
+
+export const isMarker = (child: ReactNode): boolean => {
+	return !!(child && (child as any).props && (child as any).props.coordinate && (child as any).props.cluster !== false);
+};
+
 export const calculateBBox = (region: Region): [number, number, number, number] => {
-	const lngD = region.longitudeDelta < 0 ? region.longitudeDelta + 360 : region.longitudeDelta;
+	let lngD: number;
+	if (region.longitudeDelta < 0) lngD = region.longitudeDelta + 360;
+	else lngD = region.longitudeDelta;
 
 	return [
 		region.longitude - lngD, // westLng - min lng
@@ -24,19 +65,13 @@ export const calculateBBox = (region: Region): [number, number, number, number] 
 	];
 };
 
-/**
- * Returns the zoom level for a given region
- */
 export const returnMapZoom = (region: Region, bBox: [number, number, number, number], minZoom: number): number => {
 	const viewport = region.longitudeDelta >= 40 ? { zoom: minZoom } : GeoViewport.viewport(bBox, [width, height]);
 
 	return viewport.zoom;
 };
 
-/**
- * Converts a marker to a GeoJSON feature
- */
-export const markerToGeoJSONFeature = (marker: any, index: number): Feature => {
+export const markerToGeoJSONFeature = (marker: any, index: number): any => {
 	return {
 		type: 'Feature',
 		geometry: {
@@ -51,24 +86,19 @@ export const markerToGeoJSONFeature = (marker: any, index: number): Feature => {
 	};
 };
 
-/**
- * Generates a spiral pattern for displaying markers in a cluster
- */
-export const generateSpiral = (marker: Feature, clusterChildren: Feature[], markers: Feature[], index: number): MarkerData[] => {
+export const generateSpiral = (marker: MarkerData, clusterChildren: any[], markers: MarkerData[], index: number): SpiderMarker[] => {
 	const { properties, geometry } = marker;
 	const count = properties.point_count;
 	const centerLocation = geometry.coordinates;
 
-	const res: MarkerData[] = [];
+	const res: SpiderMarker[] = [];
 	let angle = 0;
 	let start = 0;
 
-	// Calculate starting point in the children array
 	for (let i = 0; i < index; i++) {
 		start += markers[i].properties.point_count || 0;
 	}
 
-	// Generate spiral positions for each marker
 	for (let i = 0; i < count; i++) {
 		angle = 0.25 * (i * 0.5);
 		const latitude = centerLocation[1] + 0.0002 * angle * Math.cos(angle);
@@ -90,37 +120,58 @@ export const generateSpiral = (marker: Feature, clusterChildren: Feature[], mark
 	return res;
 };
 
-/**
- * Returns the style for a cluster marker based on the number of points
- */
-export const returnMarkerStyle = (points: number): MarkerStyle => {
-	// Small clusters
-	if (points < 10) {
+export const returnMarkerStyle = (points: number): ClusterStyleProps => {
+	if (points >= 50) {
 		return {
-			width: 32,
-			height: 32,
-			size: 24,
-			fontSize: 12
+			width: 84,
+			height: 84,
+			size: 64,
+			fontSize: 20
 		};
 	}
 
-	// Medium clusters
-	if (points < 25) {
+	if (points >= 25) {
 		return {
-			width: 40,
-			height: 40,
-			size: 30,
-			fontSize: 13
+			width: 78,
+			height: 78,
+			size: 58,
+			fontSize: 19
 		};
 	}
 
-	// Large clusters
-	if (points < 50) {
+	if (points >= 15) {
 		return {
-			width: 44,
-			height: 44,
-			size: 34,
-			fontSize: 14
+			width: 72,
+			height: 72,
+			size: 54,
+			fontSize: 18
+		};
+	}
+
+	if (points >= 10) {
+		return {
+			width: 66,
+			height: 66,
+			size: 50,
+			fontSize: 17
+		};
+	}
+
+	if (points >= 8) {
+		return {
+			width: 60,
+			height: 60,
+			size: 46,
+			fontSize: 17
+		};
+	}
+
+	if (points >= 4) {
+		return {
+			width: 54,
+			height: 54,
+			size: 40,
+			fontSize: 16
 		};
 	}
 
@@ -132,77 +183,12 @@ export const returnMarkerStyle = (points: number): MarkerStyle => {
 	};
 };
 
-/**
- * Removes the children prop from marker props
- */
-const _removeChildrenFromProps = (props: Record<string, any>): Record<string, any> => {
-	const newProps: Record<string, any> = {};
-	for (const key of Object.keys(props)) {
+const _removeChildrenFromProps = (props: any): object => {
+	const newProps: { [key: string]: any } = {};
+	Object.keys(props).forEach((key) => {
 		if (key !== 'children') {
 			newProps[key] = props[key];
 		}
-	}
-	return newProps;
-};
-
-/**
- * Ensures that coordinates from SuperCluster are in the correct format
- */
-export const ensureCoordinates = (coords: [number, number] | undefined): [number, number] => {
-	if (!coords || coords.length < 2) return [0, 0];
-	return [coords[0], coords[1]];
-};
-
-/**
- * Converts SuperCluster features to our Feature type
- */
-export const convertClusterToFeature = (cluster: any): Feature => {
-	return {
-		type: 'Feature',
-		geometry: {
-			type: 'Point',
-			coordinates: ensureCoordinates(cluster.geometry.coordinates)
-		},
-		properties: {
-			...cluster.properties,
-			point_count: cluster.properties.point_count || 0
-		},
-		id: cluster.id
-	};
-};
-
-/**
- * Converts an array of SuperCluster features to our Feature[] type
- */
-export const convertToFeatureArray = (clusters: any[]): Feature[] => {
-	if (!clusters || !Array.isArray(clusters)) return [];
-
-	return clusters.map((cluster) => {
-		// Handle the case where coordinates might be undefined or not an array with enough elements
-		let coordinates: [number, number] = [0, 0];
-
-		if (
-			cluster.geometry &&
-			cluster.geometry.coordinates &&
-			Array.isArray(cluster.geometry.coordinates) &&
-			cluster.geometry.coordinates.length >= 2
-		) {
-			coordinates = [cluster.geometry.coordinates[0], cluster.geometry.coordinates[1]];
-		}
-
-		return {
-			type: 'Feature',
-			geometry: {
-				type: 'Point',
-				coordinates
-			},
-			properties: {
-				...cluster.properties,
-				point_count: cluster.properties.point_count || 0,
-				cluster_id: cluster.properties.cluster_id,
-				cluster: cluster.properties.cluster
-			},
-			id: cluster.id
-		};
 	});
+	return newProps;
 };

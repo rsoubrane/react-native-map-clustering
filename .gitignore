@@ -12,13 +12,16 @@ android/app/build/
 *.hmap
 *.lock
 *.xcuserstate
-*.xcworkspace
-*.xcodeproj/project.xcworkspace/xcuserdata/
-*.xcodeproj/xcuserdata/
+*.xcworkspace/
+*.xcodeproj/
+*.gradle/
+*.keystore
+*.jks
 
 # Logs
 logs/
 *.log
+*.tlog
 
 # OS generated files
 .DS_Store
@@ -33,12 +36,9 @@ dist/
 .env.local
 .env.*.local
 
-# Temporary files
-tmp/
-temp/
-*.tmp
+# Miscellaneous
 *.swp
 *.swo
+*.tmp
 *.bak
 *.orig
-biome.json

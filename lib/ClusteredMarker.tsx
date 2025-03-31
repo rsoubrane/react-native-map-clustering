@@ -1,10 +1,25 @@
-import React, { memo, useMemo } from 'react';
+import { FC, memo } from 'react';
 import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Marker } from 'react-native-maps';
 import { returnMarkerStyle } from './helpers';
-import { ClusterMarkerProps } from './types';
 
-const ClusteredMarker: React.FC<ClusterMarkerProps> = ({
+interface ClusteredMarkerProps {
+	geometry: {
+		coordinates: [number, number]; // [longitude, latitude]
+	};
+	properties: {
+		point_count: number;
+		cluster_id: number;
+		[key: string]: any;
+	};
+	onPress: () => void;
+	clusterColor: string;
+	clusterTextColor: string;
+	clusterFontFamily?: string;
+	tracksViewChanges: boolean;
+}
+
+const ClusteredMarker: FC<ClusteredMarkerProps> = ({
 	geometry,
 	properties,
 	onPress,
@@ -14,27 +29,15 @@ const ClusteredMarker: React.FC<ClusterMarkerProps> = ({
 	tracksViewChanges
 }) => {
 	const points = properties.point_count;
-
-	// Memoize style calculations to prevent unnecessary re-renders
-	const markerStyle = useMemo(() => returnMarkerStyle(points), [points]);
-	const { width, height, fontSize, size } = markerStyle;
-
-	// Create a unique key for the marker based on its coordinates
-	const markerKey = useMemo(() => `${geometry.coordinates[0]}_${geometry.coordinates[1]}`, [geometry.coordinates]);
-
-	// Memoize coordinate object to prevent unnecessary re-renders
-	const coordinate = useMemo(
-		() => ({
-			longitude: geometry.coordinates[0],
-			latitude: geometry.coordinates[1]
-		}),
-		[geometry.coordinates]
-	);
+	const { width, height, fontSize, size } = returnMarkerStyle(points);
 
 	return (
 		<Marker
-			key={markerKey}
-			coordinate={coordinate}
+			key={`${geometry.coordinates[0]}_${geometry.coordinates[1]}`}
+			coordinate={{
+				longitude: geometry.coordinates[0],
+				latitude: geometry.coordinates[1]
+			}}
 			style={{ zIndex: points + 1 }}
 			onPress={onPress}
 			tracksViewChanges={tracksViewChanges}>
@@ -99,13 +102,4 @@ const styles = StyleSheet.create({
 	}
 });
 
-// Use React.memo with a custom comparison function for optimal performance
-export default memo(ClusteredMarker, (prevProps, nextProps) => {
-	return (
-		prevProps.geometry.coordinates[0] === nextProps.geometry.coordinates[0] &&
-		prevProps.geometry.coordinates[1] === nextProps.geometry.coordinates[1] &&
-		prevProps.properties.point_count === nextProps.properties.point_count &&
-		prevProps.clusterColor === nextProps.clusterColor &&
-		prevProps.clusterTextColor === nextProps.clusterTextColor
-	);
-});
+export default memo(ClusteredMarker);
