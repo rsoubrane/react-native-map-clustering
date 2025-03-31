@@ -2,7 +2,6 @@ import { ReactNode, RefObject } from 'react';
 import { LayoutAnimationConfig } from 'react-native';
 import { Region, LatLng, MapViewProps, AnimatedRegion } from 'react-native-maps';
 import SuperCluster from 'supercluster';
-import { BBox, GeoJsonProperties } from 'geojson';
 
 // Add a MapRegion type that can handle both Region and AnimatedRegion
 export type MapRegion = Region | AnimatedRegion;
@@ -72,11 +71,11 @@ export interface SuperClusterOptions {
 }
 
 // Add compatibility with SuperCluster types
-export interface SuperClusterType extends SuperCluster<GeoJsonProperties, GeoJsonProperties> {
+export interface SuperClusterType extends SuperCluster<Record<string, any>, Record<string, any>> {
 	getClusterExpansionZoom(clusterId: number): number;
 	getCluster(clusterId: number): Feature;
 	getLeaves(clusterId: number, limit?: number, offset?: number): Feature[];
-	getClusters(bbox: BBox, zoom: number): Feature[];
+	getClusters(bbox: number[], zoom: number): Feature[];
 	load(points: Feature[]): SuperClusterType;
 }
 

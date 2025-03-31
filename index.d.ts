@@ -1,8 +1,8 @@
+import { BBox } from 'geojson';
 import { Component, ReactNode, RefObject } from 'react';
 import { LayoutAnimationConfig } from 'react-native';
 import { MapViewProps, Region, LatLng, AnimatedRegion } from 'react-native-maps';
 import SuperCluster from 'supercluster';
-import { BBox, GeoJSON } from 'geojson';
 
 export type MapRegion = Region | AnimatedRegion;
 
