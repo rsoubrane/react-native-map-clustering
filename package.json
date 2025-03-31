@@ -1,37 +1,47 @@
 {
-  "name": "rs-react-native-map-clustering",
-  "version": "3.4.4",
-  "description": "React Native Map Clustering both for Android and iOS",
-  "types": "index.d.ts",
-  "main": "index.js",
-  "scripts": {
-    "test": "jest"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/rsoubrane/react-native-map-clustering.git"
-  },
-  "keywords": [
-    "react-native",
-    "react",
-    "cluster",
-    "android",
-    "iOS",
-    "map",
-    "clustering"
-  ],
-  "author": "Venits",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/rsoubrane/react-native-map-clustering/issues"
-  },
-  "homepage": "https://github.com/rsoubrane/react-native-map-clustering#readme",
-  "dependencies": {
-    "supercluster": "^8.0.1",
-    "@mapbox/geo-viewport": "^0.5.0"
-  },
-  "peerDependencies": {
-    "react-native-maps": "*",
-    "react-native": "*"
-  }
+    "name": "rs-react-native-map-clustering",
+    "version": "4.0.2",
+    "description": "React Native Map Clustering both for Android and iOS",
+    "types": "index.d.ts",
+    "main": "index.js",
+    "scripts": {
+        "build": "tsc",
+        "prepare": "npm run build"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/rsoubrane/react-native-map-clustering.git"
+    },
+    "keywords": [
+        "react-native",
+        "react",
+        "cluster",
+        "android",
+        "iOS",
+        "map",
+        "clustering"
+    ],
+    "author": "Venits",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/rsoubrane/react-native-map-clustering/issues"
+    },
+    "homepage": "https://github.com/rsoubrane/react-native-map-clustering#readme",
+    "dependencies": {
+        "supercluster": "^8.0.1",
+        "@mapbox/geo-viewport": "^0.5.0"
+    },
+    "peerDependencies": {
+        "react-native-maps": "*",
+        "react-native": "*",
+        "react": "*"
+    },
+    "devDependencies": {
+        "@types/react": "*",
+        "@types/react-native": "*",
+        "@types/supercluster": "*",
+        "@types/mapbox__geo-viewport": "*",
+        "@types/geojson": "^7946.0.10",
+        "typescript": "*"
+    }
 }
