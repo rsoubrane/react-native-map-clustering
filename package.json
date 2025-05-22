@@ -1,6 +1,6 @@
 {
     "name": "rs-react-native-map-clustering",
-    "version": "4.0.2",
+    "version": "5.0.0",
     "description": "React Native Map Clustering both for Android and iOS with TypeScript support",
     "types": "dist/index.d.ts",
     "main": "dist/index.js",
@@ -50,7 +50,7 @@
         "@types/react-native": "*",
         "@types/supercluster": "*",
         "@types/mapbox__geo-viewport": "*",
-        "@types/geojson": "^7946.0.10",
+        "@types/geojson": "^7946.0.16",
         "typescript": "*"
     },
     "packageManager": "pnpm@10.7.0+sha512.6b865ad4b62a1d9842b61d674a393903b871d9244954f652b8842c2b553c72176b278f64c463e52d40fff8aba385c235c8c9ecf5cc7de4fd78b8bb6d49633ab6"
