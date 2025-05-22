@@ -3,6 +3,8 @@ import { LayoutAnimationConfig } from 'react-native';
 import { Region, LatLng, MapViewProps, AnimatedRegion } from 'react-native-maps';
 import SuperCluster from 'supercluster';
 
+// ----------------------------------------------------------------------
+
 // Add a MapRegion type that can handle both Region and AnimatedRegion
 export type MapRegion = Region | AnimatedRegion;
 
@@ -25,6 +27,18 @@ export interface Feature {
 		[key: string]: any;
 	};
 	id?: number | string;
+}
+
+// Strongly typed ClusterFeature to minimize type assertions
+export interface ClusterFeature extends Feature {
+	properties: {
+		cluster?: boolean;
+		cluster_id?: number;
+		point_count: number;
+		index: number;
+		[key: string]: any;
+	};
+	geometry: GeoJsonPoint;
 }
 
 export interface MarkerData extends LatLng {

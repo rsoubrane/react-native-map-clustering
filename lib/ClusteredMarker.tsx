@@ -1,25 +1,12 @@
-import { FC, memo } from 'react';
+import { FC, memo, useMemo } from 'react';
 import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Marker } from 'react-native-maps';
 import { returnMarkerStyle } from './helpers';
+import { ClusterMarkerProps } from './types';
 
-interface ClusteredMarkerProps {
-	geometry: {
-		coordinates: [number, number]; // [longitude, latitude]
-	};
-	properties: {
-		point_count: number;
-		cluster_id: number;
-		[key: string]: any;
-	};
-	onPress: () => void;
-	clusterColor: string;
-	clusterTextColor: string;
-	clusterFontFamily?: string;
-	tracksViewChanges: boolean;
-}
+// ----------------------------------------------------------------------
 
-const ClusteredMarker: FC<ClusteredMarkerProps> = ({
+const ClusteredMarker: FC<ClusterMarkerProps> = ({
 	geometry,
 	properties,
 	onPress,
@@ -31,51 +18,69 @@ const ClusteredMarker: FC<ClusteredMarkerProps> = ({
 	const points = properties.point_count;
 	const { width, height, fontSize, size } = returnMarkerStyle(points);
 
-	return (
-		<Marker
-			key={`${geometry.coordinates[0]}_${geometry.coordinates[1]}`}
-			coordinate={{
-				longitude: geometry.coordinates[0],
-				latitude: geometry.coordinates[1]
-			}}
-			style={{ zIndex: points + 1 }}
-			onPress={onPress}
-			tracksViewChanges={tracksViewChanges}>
-			<TouchableOpacity activeOpacity={0.5} style={[styles.container, { width, height }]}>
-				<View
-					style={[
-						styles.wrapper,
-						{
-							backgroundColor: clusterColor,
-							width,
-							height,
-							borderRadius: width / 2
-						}
-					]}
-				/>
-				<View
-					style={[
-						styles.cluster,
-						{
-							backgroundColor: clusterColor,
-							width: size,
-							height: size,
-							borderRadius: size / 2
-						}
-					]}>
-					<Text
-						style={[
-							styles.text,
-							{
-								color: clusterTextColor,
-								fontSize,
-								fontFamily: clusterFontFamily
-							}
-						]}>
-						{points}
-					</Text>
+	// Memoize style calculations to avoid recalculation on re-renders
+	const markerStyle = useMemo(
+		() => ({
+			containerStyle: { width, height },
+			wrapperStyle: {
+				backgroundColor: clusterColor,
+				width,
+				height,
+				borderRadius: width / 2
+			},
+			clusterStyle: {
+				backgroundColor: clusterColor,
+				width: size,
+				height: size,
+				borderRadius: size / 2
+			},
+			textStyle: {
+				color: clusterTextColor,
+				fontSize,
+				fontFamily: clusterFontFamily,
+				fontWeight: 'bold' as const
+			},
+			zIndex: points + 1
+		}),
+		[points, clusterColor, clusterTextColor, clusterFontFamily, width, height, size, fontSize]
+	);
+
+	// Generate a stable key from coordinates and cluster ID
+	const markerKey = useMemo(
+		() => `${geometry.coordinates[0]}_${geometry.coordinates[1]}_${properties.cluster_id || ''}`,
+		[geometry.coordinates, properties.cluster_id]
+	);
+
+	// Memoize the marker content to prevent unnecessary re-renders
+	const markerContent = useMemo(
+		() => (
+			<TouchableOpacity activeOpacity={0.5} style={[styles.container, markerStyle.containerStyle]}>
+				<View style={[styles.wrapper, markerStyle.wrapperStyle]} />
+				<View style={[styles.cluster, markerStyle.clusterStyle]}>
+					<Text style={[styles.text, markerStyle.textStyle]}>{points}</Text>
 				</View>
 			</TouchableOpacity>
+		),
+		[markerStyle, points]
+	);
+
+	// Memoize coordinate to prevent unnecessary re-renders
+	const coordinate = useMemo(
+		() => ({
+			longitude: geometry.coordinates[0],
+			latitude: geometry.coordinates[1]
+		}),
+		[geometry.coordinates]
+	);
+
+	return (
+		<Marker
+			key={markerKey}
+			coordinate={coordinate}
+			style={{ zIndex: markerStyle.zIndex }}
+			onPress={onPress}
+			tracksViewChanges={tracksViewChanges}>
+			{markerContent}
 		</Marker>
 	);
 };
