@@ -1,4 +1,4 @@
-import ClusteredMapView from './lib/ClusteredMapView';
+import ClusteredMapView from './src/clustered-map-view';
 export default ClusteredMapView;
 
-export { ClusteredMapProps, ClusterFeature } from './lib/types';
+export { ClusterFeature, ClusteredMapViewProps } from './src/types';

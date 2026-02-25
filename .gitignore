@@ -5,8 +5,6 @@ yarn-debug.log*
 yarn-error.log*
 
 # React Native
-ios/build/
-android/app/build/
 *.iml
 .idea/
 *.hmap

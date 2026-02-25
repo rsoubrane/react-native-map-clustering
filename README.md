@@ -46,6 +46,9 @@ yarn add rs-react-native-map-clustering react-native-maps
 
 # Using pnpm
 pnpm add rs-react-native-map-clustering react-native-maps
+
+# Using bun
+bun add rs-react-native-map-clustering react-native-maps
 ```
 
 ## 🚀 Quick Start
