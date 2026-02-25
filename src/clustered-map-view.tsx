@@ -64,6 +64,7 @@ const ClusteredMapView = forwardRef<MapView, ClusteredMapViewProps>(
 		const currentRegionRef = useRef<Region>(currentRegion);
 		const superClusterRef_ = useRef<SuperCluster | null>(null);
 		const externalClusterRef = useRef(superClusterRef);
+		const previousMarkerKeysRef = useRef('');
 
 		useLayoutEffect(() => {
 			currentRegionRef.current = currentRegion;
@@ -88,6 +89,22 @@ const ClusteredMapView = forwardRef<MapView, ClusteredMapViewProps>(
 		);
 
 		useEffect(() => {
+			const currentMarkerNodes = propsChildren.filter(isMarker);
+			const markerKey = currentMarkerNodes
+				.map((c) => {
+					const el = c as React.ReactElement<{ coordinate?: { latitude: number; longitude: number } }>;
+					const coord = el.props?.coordinate;
+					return `${el.key}|${coord?.latitude}|${coord?.longitude}`;
+				})
+				.join(';');
+			const markersChanged = markerKey !== previousMarkerKeysRef.current;
+			previousMarkerKeysRef.current = markerKey;
+
+			if (!markersChanged && superClusterRef_.current) {
+				updateChildren(propsChildren.filter((c) => !isMarker(c)));
+				return;
+			}
+
 			const rawData: SuperCluster.PointFeature<SuperCluster.AnyProps>[] = [];
 			const otherChildren: ReactNode[] = [];
 
